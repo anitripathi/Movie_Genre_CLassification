@@ -7,60 +7,107 @@ An AI-powered system for classifying movie genres based on plot descriptions usi
 ## 📖 Project Overview
 
 This project implements a **movie genre classification** pipeline that:
-- Loads and preprocesses a dataset of movie plots and metadata
-- Transforms text descriptions into TF-IDF feature vectors
-- Trains and evaluates two models (Logistic Regression and Naive Bayes)
-- Merges predictions with ground truth and reports performance metrics
-- Visualizes model performance and data distributions
 
+- Loads and preprocesses a dataset of movie plots and metadata.
+- Transforms text descriptions into TF-IDF feature vectors (unigrams + bigrams, stopwords removal).
+- Trains and evaluates two models: **Logistic Regression** and **Multinomial Naive Bayes**.
+- Merges predictions with ground truth and reports performance metrics (accuracy, classification report, confusion matrix).
+- Visualizes model performance and data distributions (confusion matrices, KDE plots).
 
 ---
 
 ## 🚀 Functionality
 
-1. **Data Loading**
-   - Reads training and test data from text and CSV files
-   - Parses movie ID, title, genre, and description fields
+1. **Data Loading & Parsing**
+   - Training data (`train_data.txt`): `id`, `title`, `genre`, `description`.
+   - Test data (`test_data.txt`): `id`, `title`, `description`.
+   - Solution data (`test_data_solution.txt`): `id`, `title`, `genre`, `description` (ground truth).
 
 2. **Preprocessing**
-   - Strips whitespace, lowercases text labels
-   - Extracts release year from titles
-   - Cleans and vectorizes descriptions with TF-IDF (unigrams + bigrams, stopwords removal)
+   - Strip whitespace and lowercase the `genre` labels.
+   - Extract release `year` from movie titles via regex (e.g., `"Movie Name (2010)"`).
+   - Clean text: remove HTML tags, non-alphabetic characters, extra spaces, and stopwords (optional via NLTK).
 
-3. **Model Training**
-   - Trains **Logistic Regression** and **Multinomial Naive Bayes** on TF-IDF vectors
+3. **Feature Extraction**
+   - **Combine** `title` + `description` for richer context.
+   - **TF-IDF Vectorization**:
+     ```python
+     vectorizer = TfidfVectorizer(
+         max_features=20000,
+         stop_words='english',
+         ngram_range=(1,2),
+         min_df=2
+     )
+     X_train = vectorizer.fit_transform(train_df['text'])
+     X_test  = vectorizer.transform(test_df['text'])
+     ```
 
-4. **Prediction & Evaluation**
-   - Predicts genres on test set
-   - Merges with true labels, computes accuracy, classification reports, and confusion matrices
+4. **Model Training & Prediction**
+   - **Label Encoding** of genres:
+     ```python
+     label_encoder = LabelEncoder()
+     y_train = label_encoder.fit_transform(train_df['genre'])
+     ```
+   - **Logistic Regression**:
+     ```python
+     lr = LogisticRegression(max_iter=10000)
+     lr.fit(X_train, y_train)
+     y_pred_lr = lr.predict(X_test)
+     ```
+   - **Multinomial Naive Bayes**:
+     ```python
+     nb = MultinomialNB()
+     nb.fit(X_train, y_train)
+     y_pred_nb = nb.predict(X_test)
+     ```
 
-5. **Visualization**
-   - Confusion matrices for each model
-   - Kernel density plots for release-year distribution (train vs. test)
-   - Word-frequency bar charts (via TF-IDF scores)
+5. **Evaluation**
+   - **Merge** predictions with `test_data_solution` on `id`:
+     ```python
+     merged = pd.merge(df_solution[['id','genre']], test_df[['id','Predicted_Genre']], on='id')
+     ```
+   - **Accuracy**:
+     ```python
+     accuracy_score(merged['genre'], merged['Predicted_Genre'])
+     ```
+   - **Classification Report**:
+     ```python
+     print(classification_report(merged['genre'], merged['Predicted_Genre'], target_names=label_encoder.classes_))
+     ```
+   - **Confusion Matrix** (only labels present):
+     ```python
+     labels = np.unique(merged[['genre','Predicted_Genre']].values.ravel())
+     cm = confusion_matrix(merged['genre'], merged['Predicted_Genre'], labels=labels)
+     ConfusionMatrixDisplay(cm, display_labels=labels).plot(...)
+     ```
 
+6. **Visualization**
+   - **Confusion Matrices** for both models with clear labels and rotated ticks.
+   - **KDE Plot** for movie release `year` distribution (train vs. test):
+     ```python
+     sns.kdeplot(train_df['year'], label='Train', fill=True)
+     sns.kdeplot(test_df['year'], label='Test', fill=True)
+     ```
+   - **Top TF-IDF Terms** bar chart by summed TF-IDF scores.
 
 ---
 
 ## ✅ Code Quality & Best Practices
 
-- **Modular functions** for data loading and preprocessing
-- **Consistent naming** and clear variable scopes
-- **Vectorized operations** with Pandas for speed
-- **Use of `sklearn` pipelines** for reproducibility
-- **Error handling** and data-cleaning before merges
-- **Documentation** via comments and docstrings
-
+- **Modular design**: Separate functions for loading, preprocessing, training, and evaluation.
+- **Clear variable names** and inline comments for readability.
+- **Reproducibility**: Fixed random seeds and consistent train/test splits.
+- **Error handling**: Checks for missing data and mismatched IDs before merges.
+- **Version control**: Well-structured commits, `.gitignore` for dependencies and data files.
 
 ---
 
 ## 💡 Innovation & Creativity
 
-- Combining **title + description** for richer context
-- Use of **bigrams** in TF-IDF to capture phrase-level meaning
-- **Year extraction** from titles to explore temporal trends
-- Dual-model comparison enables ensemble decision-making potential
-
+- **Dual-model comparison** enables easy benchmarking and potential ensemble strategies.
+- **Text enrichment** by combining title and description.
+- **N-gram features** (bigrams) capture multi-word expressions (e.g., "space ship").
+- **Temporal analysis** via year extraction and KDE plots.
 
 ---
 
@@ -68,23 +115,24 @@ This project implements a **movie genre classification** pipeline that:
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/Movie_Genre_Classification.git
+   git clone https://github.com/anitripathi/Movie_Genre_Classification.git
    cd Movie_Genre_Classification
    ```
 
 2. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
+   nltk.download('stopwords')  # optional
    ```
 
-3. **Run the analysis script**:
+3. **Run the analysis**:
    ```bash
    python movie_genre_analysis.py
    ```
-   - Outputs accuracy scores, classification reports, and visualizations
 
-4. **Experiment** with alternative models or parameters by editing `model` section in the script.
-
+4. **Review outputs**:
+   - Console: accuracy scores and classification reports.
+   - Plots: confusion matrices and KDE distribution graphs.
 
 ---
 
@@ -96,20 +144,17 @@ This project implements a **movie genre classification** pipeline that:
 - scikit-learn
 - matplotlib
 - seaborn
-- nltk (for optional text preprocessing)
-
+- nltk (for stopwords)
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please open an issue or submit a pull request with:
-- Bug fixes or improvements
-- New visualization ideas
-- Integration of deep learning models (e.g., BERT)
-
+Contributions welcome! Please:
+- Fork the repo
+- Create a feature branch
+- Submit pull requests with clear descriptions and tests
 
 ---
-
- 
+## by ANIVESH TRIPATHI
 
